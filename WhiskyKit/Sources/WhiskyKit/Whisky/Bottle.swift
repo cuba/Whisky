@@ -41,6 +41,14 @@ public class Bottle: Hashable, Identifiable, ObservableObject {
     public var inFlight: Bool = false
     public var isActive: Bool = false
 
+    public var pinnedPrograms: [(pin: PinnedProgram, program: Program)] {
+        let pins = settings.pins
+        return programs.compactMap { program in
+            guard let pin = pins.first(where: { $0.url == program.url }) else { return nil }
+            return (pin, program)
+        }
+    }
+
     public init(bottleUrl: URL, inFlight: Bool = false, isActive: Bool = false) {
         let metadataURL = bottleUrl.appending(path: "Metadata").appendingPathExtension("plist")
         self.url = bottleUrl
