@@ -237,6 +237,21 @@
         }
       }
     },
+    "bottle.controlPanel" : {
+
+    },
+    "bottle.regEdit" : {
+
+    },
+    "bottle.settings" : {
+
+    },
+    "bottle.taskManager" : {
+
+    },
+    "bottle.wineConfig" : {
+
+    },
     "button.cDrive" : {
       "localizations" : {
         "da" : {

@@ -131,7 +131,7 @@ struct WhiskyApp: App {
     }
 
     static func openLogsFolder() {
-        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: Log.logsFolder.path)
+        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: Wine.logsFolder.path)
     }
 
     static func wipeShaderCaches() {

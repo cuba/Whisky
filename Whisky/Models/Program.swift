@@ -19,47 +19,57 @@
 import Foundation
 import AppKit
 import WhiskyKit
+import os.log
 
 extension Program {
-    func run() async {
+    func run() {
         if NSEvent.modifierFlags.contains(.shift) {
-            print("Running in terminal...")
-            await runInTerminal()
+            Task.detached(priority: .userInitiated) {
+                print("Running in terminal...")
+                await self.runInTerminal()
+            }
         } else {
-            await runInWine()
+            self.runInWine()
         }
     }
 
-    func runInWine() async {
-        do {
-            try await Wine.runProgram(program: self)
-        } catch {
-            await MainActor.run {
-                let alert = NSAlert()
-                alert.messageText = String(localized: "alert.message")
-                alert.informativeText = String(localized: "alert.info")
-                    + " \(url.lastPathComponent): "
-                    + error.localizedDescription
-                alert.alertStyle = .critical
-                alert.addButton(withTitle: String(localized: "button.ok"))
-                alert.runModal()
+    func runInWine() {
+        let arguments = settings.arguments.split { $0.isWhitespace }.map(String.init)
+        let environment = generateEnvironment()
+
+        Task.detached {
+            do {
+                if self.bottle.settings.dxvk {
+                    try Wine.enableDXVK(bottle: self.bottle)
+                }
+
+                try await Wine.runProgram(
+                    at: self.url, args: arguments, bottle: self.bottle, environment: environment
+                )
+            } catch {
+                await MainActor.run {
+                    self.showRunError(message: error.localizedDescription)
+                }
             }
         }
     }
 
-    func generateTerminalCommand() -> String {
-        var wineCmd = "\(Wine.wineBinary.esc) start /unix \(url.esc) \(settings.arguments)"
-
-        let env = Wine.constructEnvironment(bottle: bottle,
-                                            programEnv: generateEnvironment())
-        for environment in env {
-            wineCmd = "\(environment.key)=\(environment.value) " + wineCmd
-        }
-
-        return wineCmd
+    @MainActor private func showRunError(message: String) {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "alert.message")
+        alert.informativeText = String(localized: "alert.info")
+        + " \(self.url.lastPathComponent): "
+        + message
+        alert.alertStyle = .critical
+        alert.addButton(withTitle: String(localized: "button.ok"))
+        alert.runModal()
     }
 
-    func runInTerminal() async {
+    func generateTerminalCommand() -> String {
+        return Wine.generateRunCommand(bottle: bottle, args: settings.arguments, environment: generateEnvironment())
+    }
+
+    private func runInTerminal() async {
         let wineCmd = generateTerminalCommand().replacingOccurrences(of: "\\", with: "\\\\")
 
         let script = """
@@ -74,18 +84,10 @@ extension Program {
             appleScript.executeAndReturnError(&error)
 
             if let error = error {
-                print(error)
-                if let description = error["NSAppleScriptErrorMessage"] as? String {
-                    await MainActor.run {
-                        let alert = NSAlert()
-                        alert.messageText = String(localized: "alert.message")
-                        alert.informativeText = String(localized: "alert.info")
-                            + " \(url.lastPathComponent): "
-                            + description
-                        alert.alertStyle = .critical
-                        alert.addButton(withTitle: String(localized: "button.ok"))
-                        alert.runModal()
-                    }
+                Logger.wineKit.error("Failed to run terminal script \(error)")
+                guard let description = error["NSAppleScriptErrorMessage"] as? String else { return }
+                await MainActor.run {
+                    showRunError(message: String(describing: description))
                 }
             }
         }

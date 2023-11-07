@@ -35,7 +35,7 @@ public class Program: Hashable, ObservableObject {
 
     @MainActor @Published private var icon: Image?
     @MainActor private var loadIconTask: Task<Image?, Never>?
-    
+
     public var name: String {
         url.lastPathComponent
     }

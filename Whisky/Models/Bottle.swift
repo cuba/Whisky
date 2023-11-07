@@ -206,7 +206,7 @@ extension Bottle {
         if url.pathExtension == "bat" {
             try await Wine.runBatchFile(url: url, bottle: self)
         } else {
-            try await Wine.runExternalProgram(url: url, bottle: self)
+            try await Wine.runProgram(at: url, bottle: self)
         }
     }
 }

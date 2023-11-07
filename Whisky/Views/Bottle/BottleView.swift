@@ -26,10 +26,41 @@ enum BottleStage {
 }
 
 struct BottleView: View {
+    enum BottleCommand: Int, CaseIterable {
+        case taskManager, controlPanel, regEdit, wineConfig
+
+        var systemImage: String {
+            switch self {
+            case .taskManager: return "play.desktopcomputer"
+            case .controlPanel: return "wrench.and.screwdriver"
+            case .regEdit: return "puzzlepiece"
+            case .wineConfig: return "gearshape"
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .taskManager: return String(localized: "bottle.taskManager")
+            case .controlPanel: return String(localized: "bottle.controlPanel")
+            case .regEdit: return String(localized: "bottle.regEdit")
+            case .wineConfig: return String(localized: "bottle.wineConfig")
+            }
+        }
+
+        var arguments: [String] {
+            switch self {
+            case .taskManager: return ["taskmgr"]
+            case .controlPanel: return ["control"]
+            case .regEdit: return ["regedit"]
+            case .wineConfig: return ["winecfg"]
+            }
+        }
+    }
+
     @ObservedObject var bottle: Bottle
     @State private var path = NavigationPath()
-    @State var programLoading: Bool = false
-    @State var showWinetricksSheet: Bool = false
+    @State private var programLoading: Bool = false
+    @State private var showWinetricksSheet: Bool = false
 
     private let gridLayout = [GridItem(.adaptive(minimum: 100, maximum: .infinity))]
 
@@ -66,6 +97,25 @@ struct BottleView: View {
                     }
                 }
                 .formStyle(.grouped)
+            }
+            .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    Menu("bottle.settings", systemImage: "ellipsis") {
+                        ForEach(BottleCommand.allCases, id: \.rawValue) { command in
+                            Button(command.title, systemImage: command.systemImage) {
+                                Task.detached {
+                                    do {
+                                        for await _ in try await Wine.runWineProcess(
+                                            args: command.arguments, bottle: bottle
+                                        ) { }
+                                    } catch {
+
+                                    }
+                                }
+                            }.labelStyle(.titleAndIcon)
+                        }
+                    }
+                }
             }
             .bottomBar {
                 HStack {

@@ -34,9 +34,7 @@ struct ProgramBarView: View {
                 Text(pin?.name ?? program.name)
             }
         } primaryAction: {
-            Task {
-                await program.run()
-            }
+            program.run()
         }
         .labelStyle(.titleAndIcon)
         .onAppear {
