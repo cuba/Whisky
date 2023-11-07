@@ -99,10 +99,6 @@ struct PinsView: View {
             }
         }
 
-        if let program {
-            Task {
-                await program.run()
-            }
-        }
+        program?.run()
     }
 }

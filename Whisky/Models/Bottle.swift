@@ -212,7 +212,24 @@ extension Bottle {
         if url.pathExtension == "bat" {
             try await Wine.runBatchFile(url: url, bottle: self)
         } else {
-            try await Wine.runExternalProgram(url: url, bottle: self)
+            try await Wine.runProgram(url: url, bottle: self)
         }
+    }
+
+    /// Construct an environment merging the bottle values with the given values
+    public func constructWineEnvironment(environment: [String: String] = [:]) -> [String: String] {
+        var result: [String: String] = ["WINEPREFIX": url.path, "WINEDEBUG": "fixme-all"]
+        settings.environmentVariables(wineEnv: &result)
+        guard !environment.isEmpty else { return result }
+        result.merge(environment, uniquingKeysWith: { $1 })
+        return result
+    }
+
+    /// Construct an environment merging the bottle values with the given values
+    public func constructWineServerEnvironment(environment: [String: String] = [:]) -> [String: String] {
+        var result: [String: String] = ["WINEPREFIX": url.path, "WINEDEBUG": "fixme-all"]
+        guard !environment.isEmpty else { return result }
+        result.merge(environment, uniquingKeysWith: { $1 })
+        return result
     }
 }

@@ -101,6 +101,23 @@ struct ConfigView: View {
                 }
             }
             Section("config.title.dxvk", isExpanded: $dxvkSectionExpanded) {
+                SettingItemView(title: "config.dpi", loadingState: dpiConfigLoadingState) {
+                    Toggle(isOn: $bottle.settings.dxvk) {
+                        Text("config.dxvk")
+                    }.onChange(of: bottle.settings.dxvk, { _, newValue in
+                        Task(priority: .userInitiated) {
+                            retinaModeLoadingState = .modifying
+                            do {
+                                try await Wine.changeRetinaMode(bottle: bottle, retinaMode: newValue)
+                                retinaModeLoadingState = .success
+                            } catch {
+                                print("Failed to change build version")
+                                retinaModeLoadingState = .failed
+                            }
+                        }
+                    })
+                }
+
                 Toggle(isOn: $bottle.settings.dxvk) {
                     Text("config.dxvk")
                 }

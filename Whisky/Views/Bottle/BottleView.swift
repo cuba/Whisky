@@ -28,8 +28,9 @@ enum BottleStage {
 struct BottleView: View {
     @ObservedObject var bottle: Bottle
     @State private var path = NavigationPath()
-    @State var programLoading: Bool = false
-    @State var showWinetricksSheet: Bool = false
+    @State private var programLoading: Bool = false
+    @State private var showWinetricksSheet: Bool = false
+    @State private var showWineCommands: Bool = false
 
     private let gridLayout = [GridItem(.adaptive(minimum: 100, maximum: .infinity))]
 
@@ -72,6 +73,11 @@ struct BottleView: View {
             .bottomBar {
                 HStack {
                     Spacer()
+                    Button("run.command") {
+                        showWineCommands.toggle()
+                    }.sheet(isPresented: $showWineCommands) {
+                        WineCommandView(bottle: bottle)
+                    }
                     Button("button.cDrive") {
                         bottle.openCDrive()
                     }
@@ -185,5 +191,214 @@ struct WinetricksView: View {
         }
         .padding()
         .frame(width: 350, height: 140)
+    }
+}
+
+struct WineCommandView: View {
+    enum CommandPrompt: String, CaseIterable {
+        case wine, wineserver
+
+        var defaultCommand: String {
+            switch self {
+            case .wine:
+                return "--help"
+            case .wineserver:
+                return "--help"
+            }
+        }
+
+        func run(args: [String], for bottle: Bottle) throws -> AsyncStream<ProcessOutput> {
+            switch self {
+            case .wine:
+                return try Wine.runWineProcess(args: args, bottle: bottle, clearOutput: false)
+            case .wineserver:
+                return try Wine.runWineserverProcess(args: args, bottle: bottle, clearOutput: false)
+            }
+        }
+    }
+
+    @Environment(\.dismiss) private var dismiss
+    let bottle: Bottle
+    @AppStorage("wineCommand") private var command = ""
+    @AppStorage("wineCommandPrompt") private var prompt: CommandPrompt = .wine
+    @State private var loading = false
+    @State private var output: [ProcessOutput] = []
+    @State private var runningTask: Task<(), Never>?
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            HStack {
+                Image(systemName: "dollarsign")
+                Picker("wine.command.prompt", selection: $prompt) {
+                    ForEach(CommandPrompt.allCases, id: \.rawValue) { prompt in
+                        Text(prompt.rawValue).tag(prompt)
+                    }
+                }
+                .pickerStyle(.menu)
+                .buttonStyle(.accessoryBar)
+                .labelsHidden()
+                .frame(width: 80)
+
+                TextField("wine.command", text: $command, prompt: Text(verbatim: prompt.defaultCommand))
+                    .textFieldStyle(.plain)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .disabled(runningTask != nil)
+            }
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(output, id: \.self) { output in
+                        switch output {
+                        case .started(let process):
+                            Text("Started process `\(process.processIdentifier)`")
+                                .monospaced()
+                                .foregroundStyle(.secondary)
+                                .font(.caption)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .multilineTextAlignment(.leading)
+                        case .message(let message):
+                            Text(message)
+                                .monospaced()
+                                .foregroundStyle(.primary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .multilineTextAlignment(.leading)
+                        case .error(let message):
+                            Text(message)
+                                .monospaced()
+                                .foregroundStyle(.orange)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .multilineTextAlignment(.leading)
+                        case .terminated(let process):
+                            Text("Terminated process `\(process.processIdentifier)` (\(process.terminationStatus))")
+                                .monospaced()
+                                .foregroundStyle(.secondary)
+                                .font(.caption)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .multilineTextAlignment(.leading)
+                            Divider()
+                        }
+                    }
+                }
+            }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+            HStack {
+                Button("wine.command.clear", systemImage: "trash") {
+                    output = []
+                }.labelStyle(.iconOnly)
+                Spacer()
+                Button("create.cancel") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+                Button("button.run") {
+                    run(command: command, prompt: prompt, showProcessInfo: true)
+                }
+                .disabled(runningTask != nil)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding()
+        .frame(width: 800, height: 500)
+        .onChange(of: prompt, {
+            command = ""
+            run(command: prompt.defaultCommand, prompt: prompt, showProcessInfo: false)
+        })
+        .onAppear {
+            run(command: prompt.defaultCommand, prompt: prompt, showProcessInfo: false)
+        }
+    }
+
+    private func run(command: String, prompt: CommandPrompt, showProcessInfo: Bool) {
+        let command = command.isEmpty ? prompt.defaultCommand : command
+        let commands = split(command: command)
+
+        Task {
+            await runningTask?.value
+
+            let task = Task.detached {
+                do {
+                    for await output in try prompt.run(args: commands, for: bottle) {
+                        switch output {
+                        case .message, .error:
+                            self.output.append(output)
+                        case .terminated, .started:
+                            guard showProcessInfo else { break }
+                            self.output.append(output)
+
+                            switch output {
+                            case .started:
+                                self.output.append(.message("$ \(commands.joined(separator: " "))"))
+                            default:
+                                break
+                            }
+                        }
+                    }
+                } catch {
+                    self.output = [.error(String(describing: error))]
+                }
+            }
+
+            runningTask = task
+            await task.value
+            runningTask = nil
+        }
+    }
+
+    func split(command: String) -> [String] {
+        var start = command.startIndex
+        var end = command.startIndex
+        var foundPathBreak = false
+        var results: [String] = []
+
+        while end < command.endIndex {
+            let char = command[end]
+
+            switch char {
+            case " ":
+                if !foundPathBreak || !searchForClosingBreak(command: command, index: command.index(after: end)) {
+                    foundPathBreak = false
+                    results.append(String(command[start..<end]))
+                    start = command.index(after: end)
+                }
+            case "\\":
+                foundPathBreak = true
+            default:
+                break
+            }
+
+            end = command.index(after: end)
+        }
+
+        if start < end {
+            results.append(String(command[start..<end]))
+        }
+
+        return results
+    }
+
+    private func searchForClosingBreak(command: String, index: String.Index) -> Bool {
+        var index = index
+        var previousIsSpace = false
+
+        while index < command.endIndex {
+            let char = command[index]
+
+            switch char {
+            case " ":
+                // Another space could be possible
+                previousIsSpace = true
+            case "\\":
+                return true
+            case "-":
+                guard previousIsSpace else { break }
+                return true
+            default:
+                previousIsSpace = false
+            }
+
+            index = command.index(after: index)
+        }
+
+        return false
     }
 }

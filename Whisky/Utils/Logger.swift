@@ -27,34 +27,21 @@ class Log {
         .appending(path: Bundle.whiskyBundleIdentifier)
 
     let fileHandle: FileHandle
-    let logger: Logger
 
-    init?(bottle: Bottle?, args: [String], environment: [String: String]?) {
-        do {
-            if !FileManager.default.fileExists(atPath: Log.logsFolder.path) {
-                try FileManager.default.createDirectory(at: Log.logsFolder, withIntermediateDirectories: true)
-            }
-
-            let dateString = Date.now.ISO8601Format()
-            let fileURL = Log.logsFolder
-                .appending(path: dateString)
-                .appendingPathExtension("log")
-
-            try "".write(to: fileURL, atomically: true, encoding: .utf8)
-
-            fileHandle = try FileHandle(forWritingTo: fileURL)
-
-            if let bundleID = Bundle.main.bundleIdentifier {
-                logger = Logger(subsystem: bundleID, category: "wine")
-            } else {
-                throw "Could not get Bundle ID!"
-            }
-
-            write(line: Log.constructHeader(bottle, args, environment), printLine: false)
-        } catch {
-            print("Failed to create logger: \(error)")
-            return nil
+    init(bottle: Bottle?, args: [String], environment: [String: String]?) throws {
+        if !FileManager.default.fileExists(atPath: Log.logsFolder.path) {
+            try FileManager.default.createDirectory(at: Log.logsFolder, withIntermediateDirectories: true)
         }
+
+        let dateString = Date.now.ISO8601Format()
+        let fileURL = Log.logsFolder
+            .appending(path: dateString)
+            .appendingPathExtension("log")
+
+        try "".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        fileHandle = try FileHandle(forWritingTo: fileURL)
+        write(line: Log.constructHeader(bottle, args, environment))
     }
 
     // swiftlint:disable line_length
@@ -100,11 +87,7 @@ class Log {
     }
     // swiftlint:enable line_length
 
-    func write(line: String, printLine: Bool = true) {
-        if printLine {
-            logger.log("\(line, privacy: .public)")
-        }
-
+    func write(line: String) {
         if let data = line.data(using: .utf8) {
             do {
                 try fileHandle.write(contentsOf: data)
