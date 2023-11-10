@@ -13976,17 +13976,6 @@
         }
       }
     },
-    "terminate.process" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terminate"
-          }
-        }
-      }
-    },
     "Terminated process `%d` (%d)" : {
       "localizations" : {
         "en" : {

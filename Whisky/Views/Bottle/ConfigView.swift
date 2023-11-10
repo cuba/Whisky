@@ -101,23 +101,6 @@ struct ConfigView: View {
                 }
             }
             Section("config.title.dxvk", isExpanded: $dxvkSectionExpanded) {
-                SettingItemView(title: "config.dpi", loadingState: dpiConfigLoadingState) {
-                    Toggle(isOn: $bottle.settings.dxvk) {
-                        Text("config.dxvk")
-                    }.onChange(of: bottle.settings.dxvk, { _, newValue in
-                        Task(priority: .userInitiated) {
-                            retinaModeLoadingState = .modifying
-                            do {
-                                try await Wine.changeRetinaMode(bottle: bottle, retinaMode: newValue)
-                                retinaModeLoadingState = .success
-                            } catch {
-                                print("Failed to change build version")
-                                retinaModeLoadingState = .failed
-                            }
-                        }
-                    })
-                }
-
                 Toggle(isOn: $bottle.settings.dxvk) {
                     Text("config.dxvk")
                 }
@@ -197,7 +180,7 @@ struct ConfigView: View {
             }
             Task(priority: .userInitiated) {
                 do {
-                    dpiConfig = try await Wine.dpiResolution(bottle: bottle)
+                    dpiConfig = try await Wine.dpiResolution(bottle: bottle) ?? 0
                     dpiConfigLoadingState = .success
                 } catch {
                     print(error)
@@ -242,8 +225,12 @@ struct ConfigView: View {
     func loadBuildName() {
         Task(priority: .userInitiated) {
             do {
-                let buildVersionString = try await Wine.buildVersion(bottle: bottle)
-                buildVersion = Int(buildVersionString) ?? 0
+                if let buildVersionString = try await Wine.buildVersion(bottle: bottle) {
+                    buildVersion = Int(buildVersionString) ?? 0
+                } else {
+                    buildVersion = 0
+                }
+
                 buildVersionLoadingState = .success
             } catch {
                 print(error)

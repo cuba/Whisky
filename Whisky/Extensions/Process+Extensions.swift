@@ -17,46 +17,60 @@
 //
 
 import Foundation
+import WhiskyKit
+import os.log
 
 extension Process {
     /// Run the process returning a stream output
-    func runStream(name: String, clearOutput: Bool) throws -> AsyncStream<ProcessOutput> {
+    func runStream(name: String) throws -> AsyncStream<ProcessOutput> {
         let pipe = Pipe()
         let errorPipe = Pipe()
         standardOutput = pipe
         standardError = errorPipe
 
         let stream = AsyncStream<ProcessOutput> { continuation in
+            continuation.onTermination = { termination in
+                switch termination {
+                case .finished:
+                    break
+                case .cancelled:
+                    guard self.isRunning else { return }
+                    self.terminate()
+                @unknown default:
+                    break
+                }
+            }
+
             continuation.yield(.started(self))
 
             pipe.fileHandleForReading.readabilityHandler = { pipe in
                 let line = String(decoding: pipe.availableData, as: UTF8.self)
                 guard !line.isEmpty else { return }
                 continuation.yield(.message(line))
-                Wine.wineLogger.info("\(line, privacy: .public)")
+                Logger.wineKit.info("\(line, privacy: .public)")
             }
 
             errorPipe.fileHandleForReading.readabilityHandler = { pipe in
                 let line = String(decoding: pipe.availableData, as: UTF8.self)
                 guard !line.isEmpty else { return }
                 continuation.yield(.error(line))
-                Wine.wineLogger.warning("\(line, privacy: .public)")
+                Logger.wineKit.warning("\(line, privacy: .public)")
             }
 
-            let completionHandler = { (process: Process) in
+            terminationHandler = { (process: Process) in
                 do {
                     _ = try pipe.fileHandleForReading.readToEnd()
                     _ = try errorPipe.fileHandleForReading.readToEnd()
                 } catch {
-                    Wine.wineLogger.error("Error while clearing data: \(error)")
+                    Logger.wineKit.error("Error while clearing data: \(error)")
                 }
 
                 if process.terminationStatus == 0 {
-                    Wine.wineLogger.info(
+                    Logger.wineKit.info(
                         "Terminated \(name) with status code '\(process.terminationStatus, privacy: .public)'"
                     )
                 } else {
-                    Wine.wineLogger.warning(
+                    Logger.wineKit.warning(
                         "Terminated \(name) with status code '\(process.terminationStatus, privacy: .public)'"
                     )
                 }
@@ -64,21 +78,24 @@ extension Process {
                 continuation.yield(.terminated(process))
                 continuation.finish()
             }
-
-            if clearOutput {
-                while true {
-                    waitUntilExit()
-                    //guard pipe.fileHandleForReading.availableData.count == 0 else { continue }
-                    //guard errorPipe.fileHandleForReading.availableData.count == 0 else { continue }
-                    break
-                }
-
-                completionHandler(self)
-            } else {
-                terminationHandler = completionHandler
-            }
         }
 
+        var logParts: [String] = []
+        if let arguments = arguments {
+            logParts.append("\targuments: `\(arguments.joined(separator: " "))`")
+        }
+        if let executableURL = executableURL {
+            logParts.append("\texecutable: `\(executableURL.path(percentEncoded: false))`")
+        }
+        if let directory = currentDirectoryURL {
+            logParts.append("\tdirectory: `\(directory.path(percentEncoded: false))`")
+        }
+        if let environment = environment {
+            logParts.append("\tenvironment: \(environment)")
+        }
+
+        let logDetails = logParts.joined(separator: "\n")
+        Logger.wineKit.info("Running process \(name)\n\(logDetails)")
         try run()
         return stream
     }

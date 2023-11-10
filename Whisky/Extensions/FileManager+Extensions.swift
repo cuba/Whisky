@@ -19,7 +19,9 @@
 import Foundation
 
 extension FileManager {
-    func replaceDLLs(in destinationDirectory: URL, withContentsIn sourceDirectory: URL, makeOriginalCopy: Bool = true) throws {
+    func replaceDLLs(
+        in destinationDirectory: URL, withContentsIn sourceDirectory: URL, makeOriginalCopy: Bool = true
+    ) throws {
         let enumerator = FileManager.default.enumerator(
             at: sourceDirectory, includingPropertiesForKeys: [.isRegularFileKey])
 
