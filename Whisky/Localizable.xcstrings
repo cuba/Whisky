@@ -11370,120 +11370,120 @@
         }
       }
     },
-    "setup.gptk.eta" : {
+    "setup.gptk.eta.%@" : {
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- %@ tilbage"
+            "value" : "%@ tilbage"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- %@ verbleibend"
+            "value" : "%@ verbleibend"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- %@ remaining"
+            "value" : "%@ remaining"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- %@ restante"
+            "value" : "%@ restante"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- %@ jäljellä"
+            "value" : "%@ jäljellä"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- %@ restantes"
+            "value" : "%@ restantes"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "-%@ rimanenti"
+            "value" : "%@ rimanenti"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- 残り %@"
+            "value" : "残り %@"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- %@ 남음"
+            "value" : "%@ 남음"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- %@ resterend"
+            "value" : "%@ resterend"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- pozostało %@"
+            "value" : "pozostało %@"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- %@ restantes"
+            "value" : "%@ restantes"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- %@ em falta"
+            "value" : "%@ em falta"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- осталось %@"
+            "value" : "осталось %@"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "-%@ kaldı"
+            "value" : "%@ kaldı"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- залишилось %@"
+            "value" : "залишилось %@"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- %@ còn lại"
+            "value" : "%@ còn lại"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- 剩余 %@"
+            "value" : "剩余 %@"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- 剩餘%@"
+            "value" : "剩餘%@"
           }
         }
       }
@@ -11724,54 +11724,54 @@
         }
       }
     },
-    "setup.gptk.progress" : {
+    "setup.gptk.progress%@.of%@" : {
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ af %@"
+            "value" : "%1$@ af %2$@"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ von %@"
+            "value" : "%1$@ von %2$@"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ of %@"
+            "value" : "%1$@ of %2$@"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ de %@"
+            "value" : "%1$@ de %2$@"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ / %@"
+            "value" : "%1$@ / %2$@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ sur %@"
+            "value" : "%1$@ sur %2$@"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ di %@"
+            "value" : "%1$@ di %2$@"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ / %@"
+            "value" : "%1$@ / %2$@"
           }
         },
         "ko" : {
@@ -11783,49 +11783,49 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ van de %@"
+            "value" : "%1$@ van de %2$@"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ z %@"
+            "value" : "%1$@ z %2$@"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ de %@"
+            "value" : "%1$@ de %2$@"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ de %@"
+            "value" : "%1$@ de %2$@"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ из %@"
+            "value" : "%1$@ из %2$@"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@'nin %@'si"
+            "value" : "%1$@'nin %2$@'si"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ з %@"
+            "value" : "%1$@ з %2$@"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ của %@"
+            "value" : "%1$@ của %2$@"
           }
         },
         "zh-Hans" : {

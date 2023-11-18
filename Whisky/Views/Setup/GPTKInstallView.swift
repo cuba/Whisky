@@ -52,12 +52,18 @@ struct GPTKInstallView: View {
         .frame(width: 400, height: 200)
         .onAppear {
             Task.detached {
-                GPTKInstaller.install(from: tarLocation)
-                await MainActor.run {
-                    installing = false
+                do {
+                    try GPTKInstaller.install(from: tarLocation)
+                    
+                    await MainActor.run {
+                        installing = false
+                    }
+
+                    try await Task.sleep(for: .seconds(2))
+                    await proceed()
+                } catch {
+                    // TODO: Show error
                 }
-                sleep(2)
-                await proceed()
             }
         }
     }

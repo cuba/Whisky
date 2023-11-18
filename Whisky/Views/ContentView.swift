@@ -148,26 +148,34 @@ struct ContentView: View {
                 showSetup = true
             }
             Task.detached {
-                let updateInfo = await GPTKInstaller.shouldUpdateGPTK()
+                do {
+                    let updateInfo = try await GPTKInstaller.shouldUpdateGPTK()
+                    guard updateInfo.shouldUpdate else { return }
+                    let version = try GPTKInstaller.gptkVersion()
 
-                if updateInfo.0 {
                     await MainActor.run {
                         let alert = NSAlert()
                         alert.messageText = String(localized: "update.gptk.title")
-                        alert.informativeText = String(format: String(localized: "update.gptk.description"),
-                                                       String(GPTKInstaller.gptkVersion() ?? SemanticVersion(0, 0, 0)),
-                                                       String(updateInfo.1))
+                        alert.informativeText = String(
+                            format: String(localized: "update.gptk.description"),
+                            String(version), String(updateInfo.version)
+                        )
                         alert.alertStyle = .warning
                         alert.addButton(withTitle: String(localized: "update.gptk.update"))
                         alert.addButton(withTitle: String(localized: "button.removeAlert.cancel"))
-
                         let response = alert.runModal()
 
                         if response == .alertFirstButtonReturn {
-                            GPTKInstaller.uninstall()
-                            showSetup = true
+                            do {
+                                try GPTKInstaller.uninstall()
+                                showSetup = true
+                            } catch {
+                                // TODO: Show error
+                            }
                         }
                     }
+                } catch {
+                    // TODO: Show error
                 }
             }
         }

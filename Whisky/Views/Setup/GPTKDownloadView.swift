@@ -27,6 +27,7 @@ struct GPTKDownloadView: View {
     @State private var downloadTask: URLSessionDownloadTask?
     @State private var observation: NSKeyValueObservation?
     @State private var startTime: Date?
+    @State private var errorMessage: String?
     @Binding var tarLocation: URL
     @Binding var path: [SetupStage]
     var body: some View {
@@ -41,20 +42,26 @@ struct GPTKDownloadView: View {
                 Spacer()
                 VStack {
                     ProgressView(value: fractionProgress, total: 1)
-                    HStack {
+
+                    if let errorMessage = errorMessage {
+                        Text(errorMessage).foregroundStyle(.red).font(.subheadline)
+                    } else {
                         HStack {
-                            Text(String(format: String(localized: "setup.gptk.progress"),
-                                        formatBytes(bytes: completedBytes),
-                                        formatBytes(bytes: totalBytes)))
-                            + Text(String(" "))
-                            + (shouldShowEstimate() ?
-                               Text(String(format: String(localized: "setup.gptk.eta"),
-                                           formatRemainingTime(remainingBytes: totalBytes - completedBytes)))
-                               : Text(String()))
-                            Spacer()
+                            HStack(spacing: 8) {
+                                let progress = formatBytes(bytes: completedBytes)
+                                let total = formatBytes(bytes: totalBytes)
+                                Text("setup.gptk.progress\(progress).of\(total)")
+
+                                if let remainingTime = formatRemainingTime(
+                                    remainingBytes: totalBytes - completedBytes
+                                ) {
+                                    Text(verbatim: "-")
+                                    Text("setup.gptk.eta.\(remainingTime)")
+                                }
+                            }
+                            .font(.subheadline)
+                            .monospacedDigit()
                         }
-                        .font(.subheadline)
-                        .monospacedDigit()
                     }
                 }
                 .padding(.horizontal)
@@ -67,10 +74,9 @@ struct GPTKDownloadView: View {
             Task {
                 if let url: URL = URL(string: "https://data.getwhisky.app/Libraries.zip") {
                     downloadTask = URLSession.shared.downloadTask(with: url) { url, _, _ in
-                        if let url = url {
-                            tarLocation = url
-                            proceed()
-                        }
+                        guard let url = url else { return }
+                        tarLocation = url
+                        proceed()
                     }
                     observation = downloadTask?.observe(\.countOfBytesReceived) { task, _ in
                         Task {
@@ -93,29 +99,26 @@ struct GPTKDownloadView: View {
         }
     }
 
-    func formatBytes(bytes: Int64) -> String {
+    private func formatBytes(bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
         formatter.zeroPadsFractionDigits = true
         return formatter.string(fromByteCount: bytes)
     }
 
-    func shouldShowEstimate() -> Bool {
+    private func shouldShowEstimate() -> Bool {
         let elapsedTime = Date().timeIntervalSince(startTime ?? Date())
         return Int(elapsedTime.rounded()) > 5 && completedBytes != 0
     }
 
-    func formatRemainingTime(remainingBytes: Int64) -> String {
-        let remainingTimeInSeconds = Double(remainingBytes) / downloadSpeed
+    private func formatRemainingTime(remainingBytes: Int64) -> String? {
+        guard shouldShowEstimate() else { return nil }
 
+        let remainingTimeInSeconds = Double(remainingBytes) / downloadSpeed
         let formatter = DateComponentsFormatter()
         formatter.allowedUnits = [.hour, .minute, .second]
         formatter.unitsStyle = .full
-        if shouldShowEstimate() {
-            return formatter.string(from: TimeInterval(remainingTimeInSeconds)) ?? ""
-        } else {
-            return ""
-        }
+        return formatter.string(from: TimeInterval(remainingTimeInSeconds))
     }
 
     func proceed() {

@@ -20,101 +20,78 @@ import Foundation
 import SemanticVersion
 
 public class GPTKInstaller {
-    public static let libraryFolder = FileManager.default.urls(for: .applicationSupportDirectory,
-                                                               in: .userDomainMask)[0]
-        .appending(path: Bundle.whiskyBundleIdentifier)
-        .appending(path: "Libraries")
+    /// The whisky application folder
+    public static let applicationFolder = FileManager.default.urls(
+      for: .applicationSupportDirectory, in: .userDomainMask
+    )[0].appending(path: Bundle.whiskyBundleIdentifier)
+
+    /// The folder of all the libfrary files
+    public static let libraryFolder = applicationFolder.appending(path: "Libraries")
+
+    /// URL to the installed `wine` `bin` directory
+    public static let binFolder: URL = libraryFolder.appending(path: "Wine").appending(path: "bin")
 
     public static func isGPTKInstalled() -> Bool {
         return FileManager.default.fileExists(atPath: libraryFolder.path)
     }
 
-    public static func install(from: URL) {
-        do {
-            let whiskySupportFolder = FileManager.default.urls(for: .applicationSupportDirectory,
-                                                               in: .userDomainMask)[0]
-                .appending(path: Bundle.whiskyBundleIdentifier)
-
-            if !FileManager.default.fileExists(atPath: whiskySupportFolder.path) {
-                try FileManager.default.createDirectory(at: whiskySupportFolder, withIntermediateDirectories: true)
-            } else {
-                // Recreate it
-                try FileManager.default.removeItem(at: whiskySupportFolder)
-                try FileManager.default.createDirectory(at: whiskySupportFolder, withIntermediateDirectories: true)
-            }
-
-            try Tar.untar(tarBall: from, toURL: whiskySupportFolder)
-
-            let tarFile = whiskySupportFolder
-                .appending(path: "Libraries")
-                .appendingPathExtension("tar")
-                .appendingPathExtension("gz")
-            try Tar.untar(tarBall: tarFile, toURL: whiskySupportFolder)
-            try FileManager.default.removeItem(at: tarFile)
-        } catch {
-            print("Failed to install GPTK: \(error)")
+    public static func install(from zipFile: URL) throws {
+        if !FileManager.default.fileExists(atPath: applicationFolder.path) {
+            try FileManager.default.createDirectory(at: applicationFolder, withIntermediateDirectories: true)
+        } else {
+            // Recreate it
+            try FileManager.default.removeItem(at: applicationFolder)
+            try FileManager.default.createDirectory(at: applicationFolder, withIntermediateDirectories: true)
         }
+
+        try Tar.untar(tarBall: zipFile, toURL: applicationFolder)
+        let tarFile = applicationFolder.appending(path: "Libraries").appendingPathExtension("tar")
+          .appendingPathExtension("gz")
+        try Tar.untar(tarBall: tarFile, toURL: applicationFolder)
+        try FileManager.default.removeItem(at: zipFile)
     }
 
-    public static func uninstall() {
-        let libraryFolder = FileManager.default.urls(for: .applicationSupportDirectory,
-                                                           in: .userDomainMask)[0]
-            .appending(path: Bundle.whiskyBundleIdentifier)
-            .appending(path: "Libraries")
-
-        do {
-            try FileManager.default.removeItem(at: libraryFolder)
-        } catch {
-            print("Failed to uninstall GPTK: \(error)")
-        }
+    public static func uninstall() throws {
+        try FileManager.default.removeItem(at: libraryFolder)
     }
 
-    public static func shouldUpdateGPTK() async -> (Bool, SemanticVersion) {
-        if let localVersion = gptkVersion() {
-            let versionPlistURL = "https://data.getwhisky.app/GPTKVersion.plist"
+    public static func shouldUpdateGPTK() async throws -> (shouldUpdate: Bool, version: SemanticVersion) {
+        let localVersion = try gptkVersion()
+        let versionPlistURL = "https://data.getwhisky.app/GPTKVersion.plist"
+        guard let remoteUrl = URL(string: versionPlistURL) else { return (false, SemanticVersion(0, 0, 0)) }
 
-            if let remoteUrl = URL(string: versionPlistURL) {
-                return await withCheckedContinuation { continuation in
-                    URLSession.shared.dataTask(with: URLRequest(url: remoteUrl)) { data, _, error in
-                        do {
-                            if error == nil, let data = data {
-                                let decoder = PropertyListDecoder()
-                                let remoteInfo = try decoder.decode(GPTKVersion.self, from: data)
-                                let remoteVersion = remoteInfo.version
-
-                                let isRemoteNewer = remoteVersion > localVersion
-                                continuation.resume(returning: (isRemoteNewer, remoteVersion))
-                                return
-                            }
-                            if let error = error {
-                                print(error)
-                            }
-                        } catch {
-                            print(error)
-                        }
-                        continuation.resume(returning: (false, SemanticVersion(0, 0, 0)))
-                    }.resume()
+        return try await withCheckedThrowingContinuation { continuation in
+            URLSession.shared.dataTask(with: URLRequest(url: remoteUrl)) { data, _, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
                 }
-            }
-        }
 
-        return (false, SemanticVersion(0, 0, 0))
+                guard let data = data else {
+                    continuation.resume(returning: (false, SemanticVersion(0, 0, 0)))
+                    return
+                }
+
+                do {
+                    let decoder = PropertyListDecoder()
+                    let remoteInfo = try decoder.decode(GPTKVersion.self, from: data)
+                    let remoteVersion = remoteInfo.version
+                    let isRemoteNewer = remoteVersion > localVersion
+                    continuation.resume(returning: (isRemoteNewer, remoteVersion))
+                } catch {
+                    print(error)
+                    continuation.resume(throwing: error)
+                }
+            }.resume()
+        }
     }
 
-    public static func gptkVersion() -> SemanticVersion? {
-        do {
-            let versionPlist = libraryFolder
-                .appending(path: "GPTKVersion")
-                .appendingPathExtension("plist")
-
-            let decoder = PropertyListDecoder()
-            let data = try Data(contentsOf: versionPlist)
-            let info = try decoder.decode(GPTKVersion.self, from: data)
-            return info.version
-        } catch {
-            print(error)
-            return nil
-        }
+    public static func gptkVersion() throws -> SemanticVersion {
+        let versionPlist = libraryFolder.appending(path: "GPTKVersion").appendingPathExtension("plist")
+        let decoder = PropertyListDecoder()
+        let data = try Data(contentsOf: versionPlist)
+        let info = try decoder.decode(GPTKVersion.self, from: data)
+        return info.version
     }
 }
 

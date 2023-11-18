@@ -146,7 +146,11 @@ struct InstallStatusView: View {
 
     func uninstall() {
         if name == "GPTK" {
-            GPTKInstaller.uninstall()
+            do {
+                try GPTKInstaller.uninstall()
+            } catch {
+                // TODO: Show error
+            }
         }
 
         shouldCheckInstallStatus.toggle()
